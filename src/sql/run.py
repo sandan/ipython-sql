@@ -274,12 +274,15 @@ def run(conn, sql, config, user_namespace):
                 raise Exception("ipython_sql does not support transactions")
             txt = sqlalchemy.sql.text(statement)
             result = conn.session.execute(txt, user_namespace)
+            
             try:
-                # mssql has autocommit
-                if 'mssql' not in str(conn.dialect):
+                dialect = conn.metadata.bind.dialect
+                if not dialect.conn_supports_autocommit(conn.session):
                     conn.session.execute('commit')
+                    
             except sqlalchemy.exc.OperationalError: 
                 pass # not all engines can commit
+            
             if result and config.feedback:
                 print(interpret_rowcount(result.rowcount))
         resultset = ResultSet(result, statement, config)
